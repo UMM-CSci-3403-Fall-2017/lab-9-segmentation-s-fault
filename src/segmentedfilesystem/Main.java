@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 
 public class Main {
 	int port;
@@ -13,20 +11,24 @@ public class Main {
 	DatagramSocket socket = null;
 	DatagramPacket packet;
 	byte[] sendBuf = new byte[256];
-    
-    public static void main(String[] args) throws IOException {
-    	
-    	
-    	if(args.length != 1){
-    		System.out.println("Using segmented client server");
-    		return;
-    	}
-    	DatagramSocket socket = new DatagramSocket();
-    	
-        byte[] buf = new byte[256];
-        InetAddress address = InetAddress.getByName(args[0]);
-        DatagramPacket packet = new DatagramPacket(buf,buf.length,address,4445);
-        socket.send(packet);
-    }
+
+	public static void main(String[] args) throws IOException {
+
+		InetAddress address = InetAddress.getByName("146.57.33.55");
+		DatagramSocket socket = new DatagramSocket();
+		
+		DatagramPacket sendPacket = new DatagramPacket(new byte[1], 1, address, 6014);
+		socket.send(sendPacket);
+		
+		DatagramPacket receivedPacket = new DatagramPacket(new byte[1000], 1000);
+		System.out.println("datapacket sent?");
+		socket.receive(receivedPacket);
+		byte[] received = receivedPacket.getData();
+		
+		System.out.println("received datapacket?");
+		System.out.println("this is the least significant bit? " + received[0] % 2);
+		System.out.write(received, 0, 1000);
+		socket.close();
+	}
 
 }
