@@ -1,10 +1,18 @@
 package segmentedfilesystem;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 
 public class Main {
@@ -13,15 +21,10 @@ public class Main {
 	DatagramSocket socket = null;
 	DatagramPacket packet;
 	byte[] sendBuf = new byte[256];
-	public static boolean f1Done;
-	public static boolean f2Done;
-	public static boolean f3Done;
 	public static HashMap<Byte, ArrayList<byte[]>> storage = new HashMap<>();
+	public static HashMap<Byte, byte[]> headerStorage = new HashMap<>();
 
 	public static void main(String[] args) throws IOException {
-		f1Done = false;
-		f2Done = false;
-		f3Done = false;
 
 		InetAddress address = InetAddress.getByName("146.57.33.55");
 		DatagramSocket socket = new DatagramSocket();
@@ -29,47 +32,91 @@ public class Main {
 		DatagramPacket sendPacket = new DatagramPacket(new byte[1], 1, address, 6014);
 		socket.send(sendPacket);
 
-		DatagramPacket receivedPacket = new DatagramPacket(new byte[1000], 1000);
-		System.out.println("this is the first length " + receivedPacket.getLength());
-		System.out.println("datapacket sent?");
+		DatagramPacket receivedPacket = new DatagramPacket(new byte[1024], 1024);
 		socket.receive(receivedPacket);
-		byte[] received = receivedPacket.getData();
-		Byte ID = new Byte(getFileID(received));
 		
-		while (receivedPacket.getLength() != 0) {
-			if(received[0] % 4 == 1){
-				System.out.println("this is the last packet?");
-				int coolio = received[2] & received[3];
-				System.out.println(coolio);
-			}
+		byte[] received = Arrays.copyOf(receivedPacket.getData(), receivedPacket.getLength());
+		Byte ID = new Byte(getFileID(received));
+		Integer[] lengths = new Integer[3];
+		Byte[] fileIDs = new Byte[3];
+		int counter = 0;
+
+		while (true) {
 
 			if (!storage.containsKey(ID)) {
-				ArrayList<byte[]> temp = new ArrayList<byte[]>();
-				temp.add(received);
-				storage.put(ID, temp);
+				if (isHeader(received)) {
+					headerStorage.put(ID, received);
+				} else {
+					ArrayList<byte[]> temp = new ArrayList<byte[]>();
+					temp.add(received);
+					storage.put(ID, temp);
+				}
 			} else {
-				storage.get(ID).add(received);
+				if (isHeader(received)) {
+					headerStorage.put(ID, received);
+				} else {
+					storage.get(ID).add(received);
+				}
 			}
-			
-			receivedPacket = new DatagramPacket(new byte[1000], 1000);
-			socket.receive(receivedPacket);
-			received = receivedPacket.getData();
-			ID = new Byte(getFileID(received));
-//			System.out.println(ID.toString());
-//			System.out.println(storage.size());
-		}
 
-		System.out.write(received, 0, 1000);
+			if (received[0] % 4 == 3) {
+				int value = new BigInteger(new byte[] { received[2], received[3] }).intValue();
+				lengths[counter] = value + 1;
+				fileIDs[counter] = ID;
+				counter++;
+			}
+			if (checkAmount(lengths)) {
+				break;
+			}
+			receivedPacket = new DatagramPacket(new byte[1024], 1024);
+			socket.receive(receivedPacket);
+			received = Arrays.copyOf(receivedPacket.getData(), receivedPacket.getLength());
+			ID = new Byte(getFileID(received));
+		}
+		
+		toFile(fileIDs);
 		socket.close();
+		System.out.println("Done!");
+	}
+	
+	public static void toFile(Byte[] IDs) throws IOException{
+		for (int i = 0; i < IDs.length; i++) {
+			byte[] byteName = headerStorage.get(IDs[i]);
+			String name = new String(Arrays.copyOfRange(byteName, 2, byteName.length));
+			FileOutputStream stream = new FileOutputStream("/home/blask017/lab-9/" + name);
+			try {
+				ArrayList<byte[]> fileParts = storage.get(IDs[i]);
+
+				fileParts.sort(new ByteArrComparator());
+				for (byte[] a : fileParts) {
+					stream.write(Arrays.copyOfRange(a,4,a.length));
+				}
+			} finally {
+				stream.close();
+			}
+		}
+		
 	}
 
-	public static boolean isID(byte[] headerPacket, byte[] comparePacket) {
-		if (getFileID(comparePacket) == getFileID(headerPacket)) {
-			return true;
-		} else {
-			return false;
+	public static boolean checkAmount(Integer[] lengths) {
+		int result = 0;
+		for (int i = 0; i < lengths.length; i++) {
+			if (lengths[i] == null) {
+				return false;
+			}
 		}
 
+		Collection<ArrayList<byte[]>> files = storage.values();
+		Integer[] temp = Arrays.copyOf(lengths, lengths.length);
+		for (int i = 0; i < lengths.length; i++) {
+			for (ArrayList<byte[]> a : files) {
+				if (temp[i] != null && a.size() == temp[i]) {
+					result++;
+					temp[i] = null;
+				}
+			}
+		}
+		return result == 3;
 	}
 
 	public static boolean isHeader(byte[] comparePacket) {
@@ -82,6 +129,25 @@ public class Main {
 
 	public static byte getFileID(byte[] packetByte) {
 		return packetByte[1];
+	}
+
+	private static class ByteArrComparator implements Comparator<byte[]> {
+
+		@Override
+		public int compare(byte[] o1, byte[] o2) {
+			if (getPacketNumber(o1) < getPacketNumber(o2)) {
+				return -1;
+			}
+			if (getPacketNumber(o1) > getPacketNumber(o2)) {
+				return 1;
+			}
+
+			return 0;
+		}
+
+		private int getPacketNumber(byte[] arr) {
+			return new BigInteger(new byte[] { arr[2], arr[3] }).intValue();
+		}
 	}
 
 }
