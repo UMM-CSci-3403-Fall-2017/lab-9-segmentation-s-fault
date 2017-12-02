@@ -1,14 +1,11 @@
 package segmentedfilesystem;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,7 +29,7 @@ public class Main {
 		DatagramPacket sendPacket = new DatagramPacket(new byte[1], 1, address, 6014);
 		socket.send(sendPacket);
 
-		DatagramPacket receivedPacket = new DatagramPacket(new byte[1024], 1024);
+		DatagramPacket receivedPacket = new DatagramPacket(new byte[1028], 1028);
 		socket.receive(receivedPacket);
 		
 		byte[] received = Arrays.copyOf(receivedPacket.getData(), receivedPacket.getLength());
@@ -65,21 +62,23 @@ public class Main {
 				fileIDs[counter] = ID;
 				counter++;
 			}
+			
 			if (checkAmount(lengths)) {
 				break;
 			}
-			receivedPacket = new DatagramPacket(new byte[1024], 1024);
+
+			receivedPacket = new DatagramPacket(new byte[1028], 1028);
 			socket.receive(receivedPacket);
 			received = Arrays.copyOf(receivedPacket.getData(), receivedPacket.getLength());
 			ID = new Byte(getFileID(received));
 		}
-		
+
 		toFile(fileIDs);
 		socket.close();
 		System.out.println("Done!");
 	}
-	
-	public static void toFile(Byte[] IDs) throws IOException{
+
+	public static void toFile(Byte[] IDs) throws IOException {
 		for (int i = 0; i < IDs.length; i++) {
 			byte[] byteName = headerStorage.get(IDs[i]);
 			String name = new String(Arrays.copyOfRange(byteName, 2, byteName.length));
@@ -89,13 +88,13 @@ public class Main {
 
 				fileParts.sort(new ByteArrComparator());
 				for (byte[] a : fileParts) {
-					stream.write(Arrays.copyOfRange(a,4,a.length));
+					stream.write(Arrays.copyOfRange(a, 4, a.length));
 				}
 			} finally {
 				stream.close();
 			}
 		}
-		
+
 	}
 
 	public static boolean checkAmount(Integer[] lengths) {
