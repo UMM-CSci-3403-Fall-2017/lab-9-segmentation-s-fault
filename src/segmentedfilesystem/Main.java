@@ -11,15 +11,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Set;
 
 public class Main {
-	int port;
-	InetAddress address;
-	DatagramSocket socket = null;
-	DatagramPacket packet;
-	byte[] sendBuf = new byte[256];
-	public static HashMap<Byte, ArrayList<byte[]>> storage = new HashMap<>();
-	public static HashMap<Byte, byte[]> headerStorage = new HashMap<>();
+	private static HashMap<Byte, ArrayList<byte[]>> storage = new HashMap<>();
+	private static HashMap<Byte, byte[]> headerStorage = new HashMap<>();
 
 	public static void main(String[] args) throws IOException {
 
@@ -29,62 +25,60 @@ public class Main {
 		DatagramPacket sendPacket = new DatagramPacket(new byte[1], 1, address, 6014);
 		socket.send(sendPacket);
 
-		DatagramPacket receivedPacket = new DatagramPacket(new byte[1028], 1028);
+		byte[] receivedBytes = new byte[1028];
+		DatagramPacket receivedPacket = new DatagramPacket(receivedBytes, 1028);
+
 		socket.receive(receivedPacket);
-		
-		byte[] received = Arrays.copyOf(receivedPacket.getData(), receivedPacket.getLength());
-		Byte ID = new Byte(getFileID(received));
+
+		Byte ID = new Byte(getFileID(receivedBytes));
 		Integer[] lengths = new Integer[3];
-		Byte[] fileIDs = new Byte[3];
 		int counter = 0;
 
 		while (true) {
 
 			if (!storage.containsKey(ID)) {
-				if (isHeader(received)) {
-					headerStorage.put(ID, received);
+				if (isHeader(receivedBytes)) {
+					headerStorage.put(ID, Arrays.copyOf(receivedBytes, receivedPacket.getLength()));
 				} else {
 					ArrayList<byte[]> temp = new ArrayList<byte[]>();
-					temp.add(received);
+					temp.add(Arrays.copyOf(receivedBytes, receivedPacket.getLength()));
 					storage.put(ID, temp);
 				}
 			} else {
-				if (isHeader(received)) {
-					headerStorage.put(ID, received);
+				if (isHeader(receivedBytes)) {
+					headerStorage.put(ID, Arrays.copyOf(receivedBytes, receivedPacket.getLength()));
 				} else {
-					storage.get(ID).add(received);
+					storage.get(ID).add(Arrays.copyOf(receivedBytes, receivedPacket.getLength()));
 				}
 			}
 
-			if (received[0] % 4 == 3) {
-				int value = new BigInteger(new byte[] { received[2], received[3] }).intValue();
-				lengths[counter] = value + 1;
-				fileIDs[counter] = ID;
+			if (receivedBytes[0] % 4 == 3) {
+				lengths[counter] = new BigInteger(new byte[] { receivedBytes[2], receivedBytes[3] }).intValue() + 1;
 				counter++;
 			}
-			
+
 			if (checkAmount(lengths)) {
 				break;
 			}
 
-			receivedPacket = new DatagramPacket(new byte[1028], 1028);
+			receivedBytes = new byte[1028];
+			receivedPacket = new DatagramPacket(receivedBytes, 1028);
 			socket.receive(receivedPacket);
-			received = Arrays.copyOf(receivedPacket.getData(), receivedPacket.getLength());
-			ID = new Byte(getFileID(received));
+			ID = new Byte(getFileID(receivedBytes));
 		}
 
-		toFile(fileIDs);
+		toFile(storage.keySet());
 		socket.close();
 		System.out.println("Done!");
 	}
 
-	public static void toFile(Byte[] IDs) throws IOException {
-		for (int i = 0; i < IDs.length; i++) {
-			byte[] byteName = headerStorage.get(IDs[i]);
+	private static void toFile(Set<Byte> set) throws IOException {
+		for (Byte b : set) {
+			byte[] byteName = headerStorage.get(b);
 			String name = new String(Arrays.copyOfRange(byteName, 2, byteName.length));
-			FileOutputStream stream = new FileOutputStream("/home/blask017/lab-9/" + name);
+			FileOutputStream stream = new FileOutputStream("src/" + name);
 			try {
-				ArrayList<byte[]> fileParts = storage.get(IDs[i]);
+				ArrayList<byte[]> fileParts = storage.get(b);
 
 				fileParts.sort(new ByteArrComparator());
 				for (byte[] a : fileParts) {
@@ -97,7 +91,7 @@ public class Main {
 
 	}
 
-	public static boolean checkAmount(Integer[] lengths) {
+	private static boolean checkAmount(Integer[] lengths) {
 		int result = 0;
 		for (int i = 0; i < lengths.length; i++) {
 			if (lengths[i] == null) {
@@ -118,7 +112,7 @@ public class Main {
 		return result == 3;
 	}
 
-	public static boolean isHeader(byte[] comparePacket) {
+	private static boolean isHeader(byte[] comparePacket) {
 		if (comparePacket[0] % 2 == 0) {
 			return true;
 		} else {
@@ -126,7 +120,7 @@ public class Main {
 		}
 	}
 
-	public static byte getFileID(byte[] packetByte) {
+	private static byte getFileID(byte[] packetByte) {
 		return packetByte[1];
 	}
 
