@@ -52,7 +52,7 @@ public class Main {
 				}
 			}
 
-			if (receivedBytes[0] % 4 == 3) {
+			if (isEnd(receivedBytes)) {
 				lengths[counter] = new BigInteger(new byte[] { receivedBytes[2], receivedBytes[3] }).intValue() + 1;
 				counter++;
 			}
@@ -106,6 +106,7 @@ public class Main {
 				if (temp[i] != null && a.size() == temp[i]) {
 					result++;
 					temp[i] = null;
+					break;
 				}
 			}
 		}
@@ -113,11 +114,11 @@ public class Main {
 	}
 
 	private static boolean isHeader(byte[] comparePacket) {
-		if (comparePacket[0] % 2 == 0) {
-			return true;
-		} else {
-			return false;
-		}
+		return comparePacket[0] % 2 == 0;
+	}
+	
+	private static boolean isEnd(byte[] bytes){
+		return bytes[0] % 4 == 3;
 	}
 
 	private static byte getFileID(byte[] packetByte) {
