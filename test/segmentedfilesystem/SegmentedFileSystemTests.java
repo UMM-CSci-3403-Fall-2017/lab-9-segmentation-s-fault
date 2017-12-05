@@ -2,6 +2,8 @@ package segmentedfilesystem;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+
 import org.junit.Test;
 
 /**
@@ -34,6 +36,25 @@ public class SegmentedFileSystemTests {
     	
     	assertEquals(test.getPacketNumber(testBytes), 771);
    
+    }
+    @Test
+    public void packetSortTest(){
+    	byte[] firstPacket = {3,28,0,0,10,15,20};
+    	byte[] secondPacket = {3,28,0,1,25,30,35};
+    	byte[] thirdPacket = {3,28,0,2,40,45,50};
+    	byte[] endPacket = {3,28,0,3,55,60,65};
+    	ArrayList<byte[]> packets = new ArrayList<>();
+    	packets.add(secondPacket);
+    	packets.add(endPacket);
+    	packets.add(thirdPacket);
+    	packets.add(firstPacket);
+    	DataPacket test = new DataPacket();
+    	
+    	test.sortPackets(packets);
+    	assertTrue(test.isEnd(packets.get(3)));
+    	assertEquals(test.getPacketNumber(packets.get(0)), 0);
+    	assertEquals(test.getPacketNumber(packets.get(1)), 1);
+    	assertEquals(test.getPacketNumber(packets.get(2)), 2);
     }
 
 }
