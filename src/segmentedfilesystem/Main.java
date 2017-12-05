@@ -18,7 +18,7 @@ public class Main {
 	private static HashMap<Byte, byte[]> headerStorage = new HashMap<>();
 
 	public static void main(String[] args) throws IOException {
-
+		//Sends an empty datagram packet to the server to let it know we are ready to receive the data
 		InetAddress address = InetAddress.getByName("146.57.33.55");
 		DatagramSocket socket = new DatagramSocket();
 
@@ -71,7 +71,8 @@ public class Main {
 		socket.close();
 		System.out.println("Done!");
 	}
-
+	
+	//writes the file to disk
 	private static void toFile(Set<Byte> set) throws IOException {
 		for (Byte b : set) {
 			byte[] byteName = headerStorage.get(b);
@@ -90,7 +91,7 @@ public class Main {
 		}
 
 	}
-
+	//Makes sure we've gotten all of the packets. Returns true when we've got all the packets.
 	private static boolean checkAmount(Integer[] lengths) {
 		int result = 0;
 		for (int i = 0; i < lengths.length; i++) {
@@ -112,7 +113,7 @@ public class Main {
 		}
 		return result == 3;
 	}
-
+	//Some quick methods to get some information about packets, like figuring out if they're a header, what is their ID, etc.
 	private static boolean isHeader(byte[] comparePacket) {
 		return comparePacket[0] % 2 == 0;
 	}
@@ -125,6 +126,7 @@ public class Main {
 		return packetByte[1];
 	}
 
+	// Comparator for sorting packets based on their packet number
 	private static class ByteArrComparator implements Comparator<byte[]> {
 
 		@Override
@@ -138,7 +140,7 @@ public class Main {
 
 			return 0;
 		}
-
+		//Gets the packet number
 		private int getPacketNumber(byte[] arr) {
 			return new BigInteger(new byte[] { arr[2], arr[3] }).intValue();
 		}
