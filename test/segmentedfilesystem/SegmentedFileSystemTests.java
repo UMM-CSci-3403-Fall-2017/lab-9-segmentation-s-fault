@@ -14,6 +14,7 @@ import org.junit.Test;
 public class SegmentedFileSystemTests {
 
     @Test
+    //Tests our method for determining a header packet works
     public void isHeaderTest() {
         byte[] testBytes = {0, 23, 34, 78, 23, 90, 78};
         DataPacket test = new DataPacket();
@@ -22,6 +23,7 @@ public class SegmentedFileSystemTests {
     }
     
     @Test
+    //Tests our method for determining if a packet is the ending packet 
     public void isEndTest(){
     	byte[] testBytes = {3, 23, 45, 56, 123, 127, -29};
     	DataPacket test = new DataPacket();
@@ -30,6 +32,7 @@ public class SegmentedFileSystemTests {
     }
     
     @Test
+    //Tests our method for getting the packet number
     public void packetNumberTest(){
     	byte[] testBytes = {3, 34, 3, 3, 23, 89, 34, 78};
     	DataPacket test = new DataPacket();
@@ -38,6 +41,7 @@ public class SegmentedFileSystemTests {
    
     }
     @Test
+    //Tests our packet sorting
     public void packetSortTest(){
     	byte[] firstPacket = {3,28,0,0,10,15,20};
     	byte[] secondPacket = {3,28,0,1,25,30,35};
